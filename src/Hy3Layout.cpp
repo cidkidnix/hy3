@@ -96,21 +96,31 @@ void Hy3Layout::onWindowCreatedTiling(PHLWINDOW window, eDirection) {
 	}
 
 	CMonitor* monitor = nullptr;
-
 	monitor = g_pCompositor->getMonitorFromID(window->m_iMonitorID);
 	auto special_workspace = monitor->activeSpecialWorkspace;
-	int workspace_id = special_workspace ? special_workspace->m_iID : window->m_pWorkspace->m_iID;
 
-	auto t = g_pCompositor->getWorkspaceByID(workspace_id);
+	auto to_workspace = window->m_pWorkspace->m_iID > 0 ?
+		window->m_pWorkspace : special_workspace
+		? special_workspace : window->m_pWorkspace;
 
 	this->nodes.push_back({
 	    .parent = nullptr,
 	    .data = window,
-	    .workspace = t,
+	    .workspace = to_workspace,
 	    .layout = this,
 	});
 
+	hy3_log(
+	  LOG,
+	  "pushed back"
+	);
+
 	this->insertNode(this->nodes.back());
+
+	hy3_log(
+	  LOG,
+	  "inserted"
+	);
 }
 
 void Hy3Layout::insertNode(Hy3Node& node) {
@@ -143,6 +153,12 @@ void Hy3Layout::insertNode(Hy3Node& node) {
 	Hy3Node* opening_after = nullptr;
 
 	auto* root = this->getWorkspaceRootGroup(node.workspace);
+
+	hy3_log(
+		LOG,
+		"insertNode: workspace id: {}",
+		node.workspace->m_iID
+	);
 
 	if (root != nullptr) {
 		opening_after = root->getFocusedNode();
@@ -270,7 +286,7 @@ void Hy3Layout::insertNode(Hy3Node& node) {
 	}
 
 	node.parent = opening_into;
-	node.reparenting = false;
+    node.reparenting = false;
 
 	if (opening_after == nullptr) {
 		opening_into->data.as_group().children.push_back(&node);
@@ -992,6 +1008,13 @@ void Hy3Layout::moveNodeToWorkspace(const PHLWORKSPACE& origin, std::string wsna
 	if (focused_window != nullptr
 	    && (focused_window_node == nullptr || focused_window->isFullscreen()))
 	{
+		hy3_log(
+		  LOG,
+		  "moving node {:x} from workspace {} to workspace {}",
+		  (uintptr_t) focused_window_node,
+		  origin->m_iID,
+		  focused_window_node->workspace->m_iID
+		);
 		g_pHyprRenderer->damageWindow(focused_window);
 		g_pCompositor->moveWindowToWorkspaceSafe(focused_window, workspace);
 	} else {
@@ -1014,6 +1037,7 @@ void Hy3Layout::moveNodeToWorkspace(const PHLWORKSPACE& origin, std::string wsna
 		this->insertNode(*node);
 
 		if (node->data.is_window()) {
+			g_pHyprRenderer->damageWindow(node->data.as_window());
 			g_pCompositor->moveWindowToWorkspaceSafe(node->data.as_window(), workspace);
 		} else {
 			g_pCompositor->updateWorkspaceWindows(origin->m_iID);
