@@ -977,7 +977,7 @@ void Hy3Layout::moveNodeToWorkspace(const PHLWORKSPACE& origin, std::string wsna
 	auto* focused_window_node = this->getNodeFromWindow(focused_window);
 
 	auto origin_ws = node != nullptr           ? node->workspace
-	               : focused_window != nullptr ? focused_window->m_pWorkspace
+	               : focused_window != nullptr ? focused_window_node->workspace
 	                                           : nullptr;
 
 	if (!valid(origin_ws)) return;
@@ -1012,8 +1012,13 @@ void Hy3Layout::moveNodeToWorkspace(const PHLWORKSPACE& origin, std::string wsna
 
 		changeNodeWorkspaceRecursive(*node, workspace);
 		this->insertNode(*node);
-		g_pCompositor->updateWorkspaceWindows(origin->m_iID);
-		g_pCompositor->updateWorkspaceWindows(workspace->m_iID);
+
+		if (node->data.is_window()) {
+			g_pCompositor->moveWindowToWorkspaceSafe(node->data.as_window(), workspace);
+		} else {
+			g_pCompositor->updateWorkspaceWindows(origin->m_iID);
+			g_pCompositor->updateWorkspaceWindows(workspace->m_iID);
+		}
 	}
 
 	if (follow) {
