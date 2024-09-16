@@ -95,10 +95,18 @@ void Hy3Layout::onWindowCreatedTiling(PHLWINDOW window, eDirection) {
 		return;
 	}
 
+	CMonitor* monitor = nullptr;
+
+	monitor = g_pCompositor->getMonitorFromID(window->m_iMonitorID);
+	auto special_workspace = monitor->activeSpecialWorkspace;
+	int workspace_id = special_workspace->m_bIsSpecialWorkspace ? special_workspace->m_iID : window->m_pWorkspace->m_iID;
+
+	auto t = g_pCompositor->getWorkspaceByID(workspace_id);
+
 	this->nodes.push_back({
 	    .parent = nullptr,
 	    .data = window,
-	    .workspace = window->m_pWorkspace,
+	    .workspace = t,
 	    .layout = this,
 	});
 
@@ -1504,7 +1512,7 @@ void Hy3Layout::applyNodeDataToWindow(Hy3Node* node, bool no_animation) {
 		monitor = g_pCompositor->getMonitorFromID(node->workspace->m_iMonitorID);
 	}
 
-	if (monitor == nullptr) {
+	if (!g_pCompositor->isWorkspaceSpecial(node->workspace->m_iID) && monitor == nullptr) {
 		hy3_log(
 		    ERR,
 		    "node {:x}'s workspace has no associated monitor, cannot apply node data",
