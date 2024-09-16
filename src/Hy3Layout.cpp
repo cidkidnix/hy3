@@ -99,7 +99,7 @@ void Hy3Layout::onWindowCreatedTiling(PHLWINDOW window, eDirection) {
 
 	monitor = g_pCompositor->getMonitorFromID(window->m_iMonitorID);
 	auto special_workspace = monitor->activeSpecialWorkspace;
-	int workspace_id = special_workspace->m_bIsSpecialWorkspace ? special_workspace->m_iID : window->m_pWorkspace->m_iID;
+	int workspace_id = special_workspace ? special_workspace->m_iID : window->m_pWorkspace->m_iID;
 
 	auto t = g_pCompositor->getWorkspaceByID(workspace_id);
 
