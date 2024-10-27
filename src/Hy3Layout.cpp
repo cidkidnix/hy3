@@ -115,7 +115,7 @@ void Hy3Layout::onWindowCreatedTiling(PHLWINDOW window, eDirection) {
 		return;
 	}
 
-	CMonitor* monitor = nullptr;
+	PHLMONITOR monitor = nullptr;
 	monitor = g_pCompositor->getMonitorFromID(window->m_iMonitorID);
 	auto special_workspace = monitor->activeSpecialWorkspace;
 
@@ -130,17 +130,7 @@ void Hy3Layout::onWindowCreatedTiling(PHLWINDOW window, eDirection) {
 	    .layout = this,
 	});
 
-	hy3_log(
-	  LOG,
-	  "pushed back"
-	);
-
 	this->insertNode(this->nodes.back());
-
-	hy3_log(
-	  LOG,
-	  "inserted"
-	);
 }
 
 void Hy3Layout::insertNode(Hy3Node& node) {
@@ -306,7 +296,7 @@ void Hy3Layout::insertNode(Hy3Node& node) {
 	}
 
 	node.parent = opening_into;
-    node.reparenting = false;
+	node.reparenting = false;
 
 	if (opening_after == nullptr) {
 		opening_into->data.as_group().children.push_back(&node);
