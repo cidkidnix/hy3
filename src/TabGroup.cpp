@@ -28,10 +28,10 @@ Hy3TabBarEntry::Hy3TabBarEntry(Hy3TabBar& tab_bar, Hy3Node& node): tab_bar(tab_b
 	    .create(-1.0f, g_pConfigManager->getAnimationPropertyConfig("windowsMove"), AVARDAMAGE_NONE);
 
 	this->vertical_pos
-	    .create(1.0f, g_pConfigManager->getAnimationPropertyConfig("windowsIn"), AVARDAMAGE_NONE);
+	    .create(1.0f, g_pConfigManager->getAnimationPropertyConfig("windowsMove"), AVARDAMAGE_NONE);
 
 	this->fade_opacity
-	    .create(0.0f, g_pConfigManager->getAnimationPropertyConfig("windowsIn"), AVARDAMAGE_NONE);
+	    .create(0.0f, g_pConfigManager->getAnimationPropertyConfig("windowsMove"), AVARDAMAGE_NONE);
 
 	this->focused.registerVar();
 	this->urgent.registerVar();
@@ -448,11 +448,20 @@ void damageBox(const Vector2D* position, const Vector2D* size) {
 void Hy3TabGroup::tick() {
 	static const auto enter_from_top = ConfigValue<Hyprlang::INT>("plugin:hy3:tabs:from_top");
 	static const auto padding = ConfigValue<Hyprlang::INT>("plugin:hy3:tabs:padding");
+	static const auto no_gaps_when_only = ConfigValue<Hyprlang::INT>("plugin:hy3:no_gaps_when_only");
 
 	this->bar.tick();
 
 	if (valid(this->workspace)) {
-		if (this->workspace->m_bHasFullscreenWindow) {
+		auto has_fullscreen = this->workspace->m_bHasFullscreenWindow;
+
+		if (!has_fullscreen && *no_gaps_when_only) {
+			auto root_node = g_Hy3Layout->getWorkspaceRootGroup(this->workspace);
+			has_fullscreen = root_node != nullptr && root_node->data.as_group().children.size() == 1
+										&& root_node->data.as_group().children.front()->data.is_window();
+		}
+
+		if (has_fullscreen) {
 			if (this->bar.fade_opacity.goal() != 0.0) this->bar.fade_opacity = 0.0;
 		} else {
 			if (this->bar.fade_opacity.goal() != 1.0) this->bar.fade_opacity = 1.0;
@@ -513,7 +522,7 @@ void Hy3TabGroup::renderTabBar() {
 	static const auto enter_from_top = ConfigValue<Hyprlang::INT>("plugin:hy3:tabs:from_top");
 	static const auto padding = ConfigValue<Hyprlang::INT>("plugin:hy3:tabs:padding");
 
-	auto* monitor = g_pHyprOpenGL->m_RenderData.pMonitor;
+	PHLMONITORREF monitor = g_pHyprOpenGL->m_RenderData.pMonitor;
 	auto scale = monitor->scale;
 
 	auto monitor_size = monitor->vecSize;
@@ -555,7 +564,18 @@ void Hy3TabGroup::renderTabBar() {
 
 	this->bar.setSize(scaled_size);
 
-	{
+	auto render_stencil = this->bar.fade_opacity.isBeingAnimated();
+
+	if (!render_stencil) {
+		for (auto& entry: this->bar.entries) {
+			if (entry.vertical_pos.isBeingAnimated()) {
+				render_stencil = true;
+				break;
+			}
+		}
+	}
+
+	if (render_stencil) {
 		glEnable(GL_STENCIL_TEST);
 		glClearStencil(0);
 		glClear(GL_STENCIL_BUFFER_BIT);
@@ -569,7 +589,10 @@ void Hy3TabGroup::renderTabBar() {
 			if (!valid(windowref)) continue;
 			auto window = windowref.lock();
 
-			auto wpos = window->m_vRealPosition.value() - monitor->vecPosition;
+			auto wpos =
+					window->m_vRealPosition.value() - monitor->vecPosition
+					+ (window->m_pWorkspace ? window->m_pWorkspace->m_vRenderOffset.value() : Vector2D());
+
 			auto wsize = window->m_vRealSize.value();
 
 			CBox window_box = {wpos.x, wpos.y, wsize.x, wsize.y};
@@ -622,7 +645,7 @@ void Hy3TabGroup::renderTabBar() {
 		render_entry(entry);
 	}
 
-	{
+	if (render_stencil) {
 		glClearStencil(0);
 		glClear(GL_STENCIL_BUFFER_BIT);
 		glDisable(GL_STENCIL_TEST);

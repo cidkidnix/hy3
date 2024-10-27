@@ -1,5 +1,23 @@
 # Changelog
 
+# Upcoming
+
+- Added hyprsplit compatibility for hy3:movetoworkspace
+- Added support for special workspaces
+- Added monitor switching support to hy3:movefocus
+- Added support for gapsin and gapsout workspace rules
+- Fixed tab bars with no_gaps_when_only
+
+# hl0.44.0 and before
+
+- Fixed tab bars on root node not respecting outer gaps
+- Fixed tab bars clipping when switching workspaces with slidevert
+- Improved performance of tab bars
+- Tab bars now use windowsMove for all animations
+- Fixed tab bars rendering in the wrong workspace
+- Floating windows will now be focused when all tiled windows are closed
+- Added `hy3:togglefocuslayer`
+
 # hl0.43.0 and before
 
 - Fixed blurry tab bar text

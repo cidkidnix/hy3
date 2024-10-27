@@ -11,9 +11,8 @@
 PHLWORKSPACE workspace_for_action(bool allow_fullscreen = false) {
 	if (g_pLayoutManager->getCurrentLayout() != g_Hy3Layout.get()) return nullptr;
 
-	auto workspace_1 = g_pCompositor->m_pLastMonitor->activeWorkspace;
-	auto special = g_pCompositor->m_pLastMonitor->activeSpecialWorkspace;
-	auto workspace = special ? special : workspace_1;
+	auto workspace = g_pCompositor->m_pLastMonitor->activeSpecialWorkspace;
+	if (!valid(workspace)) workspace = g_pCompositor->m_pLastMonitor->activeWorkspace;
 
 	if (!valid(workspace)) return nullptr;
 	if (!allow_fullscreen && workspace->m_bHasFullscreenWindow) return nullptr;
@@ -111,7 +110,7 @@ void dispatch_movewindow(std::string value) {
 }
 
 void dispatch_movefocus(std::string value) {
-	auto workspace = workspace_for_action();
+	auto workspace = workspace_for_action(true);
 	if (!valid(workspace)) return;
 
 	auto args = CVarList(value);
@@ -122,6 +121,10 @@ void dispatch_movefocus(std::string value) {
 	int argi = 0;
 	auto shift = parseShiftArg(args[argi++]);
 	if (!shift) return;
+	if (workspace->m_bHasFullscreenWindow) {
+		g_Hy3Layout->focusMonitor(shift.value());
+		return;
+	}
 
 	auto visible = args[argi] == "visible";
 	if (visible) argi++;
@@ -130,6 +133,13 @@ void dispatch_movefocus(std::string value) {
 	else if (args[argi] == "warp") warp_cursor = true;
 
 	g_Hy3Layout->shiftFocus(workspace, shift.value(), visible, warp_cursor);
+}
+
+void dispatch_togglefocuslayer(std::string value) {
+	auto workspace = workspace_for_action();
+	if (!valid(workspace)) return;
+
+	g_Hy3Layout->toggleFocusLayer(workspace, value != "nowarp");
 }
 
 void dispatch_warpcursor(std::string value) { g_Hy3Layout->warpCursor(); }
@@ -264,6 +274,7 @@ void registerDispatchers() {
 	HyprlandAPI::addDispatcher(PHANDLE, "hy3:changegroup", dispatch_changegroup);
 	HyprlandAPI::addDispatcher(PHANDLE, "hy3:setephemeral", dispatch_setephemeral);
 	HyprlandAPI::addDispatcher(PHANDLE, "hy3:movefocus", dispatch_movefocus);
+	HyprlandAPI::addDispatcher(PHANDLE, "hy3:togglefocuslayer", dispatch_togglefocuslayer);
 	HyprlandAPI::addDispatcher(PHANDLE, "hy3:warpcursor", dispatch_warpcursor);
 	HyprlandAPI::addDispatcher(PHANDLE, "hy3:movewindow", dispatch_movewindow);
 	HyprlandAPI::addDispatcher(PHANDLE, "hy3:movetoworkspace", dispatch_move_to_workspace);
