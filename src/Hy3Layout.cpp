@@ -115,10 +115,18 @@ void Hy3Layout::onWindowCreatedTiling(PHLWINDOW window, eDirection) {
 		return;
 	}
 
+	PHLMONITOR monitor = nullptr;
+	monitor = g_pCompositor->getMonitorFromID(window->m_iMonitorID);
+	auto special_workspace = monitor->activeSpecialWorkspace;
+
+	auto to_workspace = window->m_pWorkspace->m_iID > 0 ?
+		window->m_pWorkspace : special_workspace
+		? special_workspace : window->m_pWorkspace;
+
 	this->nodes.push_back({
 	    .parent = nullptr,
 	    .data = window,
-	    .workspace = window->m_pWorkspace,
+	    .workspace = to_workspace,
 	    .layout = this,
 	});
 
@@ -155,6 +163,12 @@ void Hy3Layout::insertNode(Hy3Node& node) {
 	Hy3Node* opening_after = nullptr;
 
 	auto* root = this->getWorkspaceRootGroup(node.workspace);
+
+	hy3_log(
+		LOG,
+		"insertNode: workspace id: {}",
+		node.workspace->m_iID
+	);
 
 	if (root != nullptr) {
 		opening_after = root->getFocusedNode();
@@ -1063,7 +1077,7 @@ void Hy3Layout::moveNodeToWorkspace(const PHLWORKSPACE& origin, std::string wsna
 	auto* focused_window_node = this->getNodeFromWindow(focused_window);
 
 	auto origin_ws = node != nullptr           ? node->workspace
-	               : focused_window != nullptr ? focused_window->m_pWorkspace
+	               : focused_window != nullptr ? focused_window_node->workspace
 	                                           : nullptr;
 
 	if (!valid(origin_ws)) return;
@@ -1078,6 +1092,13 @@ void Hy3Layout::moveNodeToWorkspace(const PHLWORKSPACE& origin, std::string wsna
 	if (focused_window != nullptr
 	    && (focused_window_node == nullptr || focused_window->isFullscreen()))
 	{
+		hy3_log(
+		  LOG,
+		  "moving node {:x} from workspace {} to workspace {}",
+		  (uintptr_t) focused_window_node,
+		  origin->m_iID,
+		  focused_window_node->workspace->m_iID
+		);
 		g_pHyprRenderer->damageWindow(focused_window);
 		g_pCompositor->moveWindowToWorkspaceSafe(focused_window, workspace);
 	} else {
@@ -1098,8 +1119,14 @@ void Hy3Layout::moveNodeToWorkspace(const PHLWORKSPACE& origin, std::string wsna
 
 		changeNodeWorkspaceRecursive(*node, workspace);
 		this->insertNode(*node);
-		g_pCompositor->updateWorkspaceWindows(origin->m_iID);
-		g_pCompositor->updateWorkspaceWindows(workspace->m_iID);
+
+		if (node->data.is_window()) {
+			g_pHyprRenderer->damageWindow(node->data.as_window());
+			g_pCompositor->moveWindowToWorkspaceSafe(node->data.as_window(), workspace);
+		} else {
+			g_pCompositor->updateWorkspaceWindows(origin->m_iID);
+			g_pCompositor->updateWorkspaceWindows(workspace->m_iID);
+		}
 	}
 
 	if (follow) {
@@ -1592,7 +1619,7 @@ void Hy3Layout::applyNodeDataToWindow(Hy3Node* node, bool no_animation) {
 
 	auto monitor = g_pCompositor->getMonitorFromID(node->workspace->m_iMonitorID);
 
-	if (monitor == nullptr) {
+	if (!g_pCompositor->isWorkspaceSpecial(node->workspace->m_iID) && monitor == nullptr) {
 		hy3_log(
 		    ERR,
 		    "node {:x}'s workspace has no associated monitor, cannot apply node data",
