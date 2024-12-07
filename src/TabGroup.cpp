@@ -7,8 +7,8 @@
 #include <hyprland/src/helpers/Color.hpp>
 #include <hyprland/src/render/OpenGL.hpp>
 #include <hyprland/src/render/Texture.hpp>
-#include <hyprutils/memory/SharedPtr.hpp>
 #include <hyprutils/math/Box.hpp>
+#include <hyprutils/memory/SharedPtr.hpp>
 #include <pango/pangocairo.h>
 #include <pixman.h>
 
@@ -170,8 +170,8 @@ void Hy3TabBarEntry::prepareTexture(float scale, CBox& box) {
 		auto focused = this->focused.value();
 		auto urgent = this->urgent.value();
 		auto inactive = 1.0 - (focused + urgent);
-		auto c = (CColor(*col_active) * focused) + (CColor(*col_urgent) * urgent)
-		       + (CColor(*col_inactive) * inactive);
+		auto c = (CHyprColor(*col_active) * focused) + (CHyprColor(*col_urgent) * urgent)
+		       + (CHyprColor(*col_inactive) * inactive);
 
 		cairo_set_source_rgba(cairo, c.r, c.g, c.b, c.a);
 
@@ -214,8 +214,8 @@ void Hy3TabBarEntry::prepareTexture(float scale, CBox& box) {
 			pango_layout_set_width(layout, width * PANGO_SCALE);
 			pango_layout_set_ellipsize(layout, PANGO_ELLIPSIZE_END);
 
-			auto c = (CColor(*col_text_active) * focused) + (CColor(*col_text_urgent) * urgent)
-			       + (CColor(*col_text_inactive) * inactive);
+			auto c = (CHyprColor(*col_text_active) * focused) + (CHyprColor(*col_text_urgent) * urgent)
+			       + (CHyprColor(*col_text_inactive) * inactive);
 
 			cairo_set_source_rgba(cairo, c.r, c.g, c.b, c.a);
 
@@ -458,7 +458,7 @@ void Hy3TabGroup::tick() {
 		if (!has_fullscreen && *no_gaps_when_only) {
 			auto root_node = g_Hy3Layout->getWorkspaceRootGroup(this->workspace);
 			has_fullscreen = root_node != nullptr && root_node->data.as_group().children.size() == 1
-										&& root_node->data.as_group().children.front()->data.is_window();
+			              && root_node->data.as_group().children.front()->data.is_window();
 		}
 
 		if (has_fullscreen) {
@@ -590,8 +590,8 @@ void Hy3TabGroup::renderTabBar() {
 			auto window = windowref.lock();
 
 			auto wpos =
-					window->m_vRealPosition.value() - monitor->vecPosition
-					+ (window->m_pWorkspace ? window->m_pWorkspace->m_vRenderOffset.value() : Vector2D());
+			    window->m_vRealPosition.value() - monitor->vecPosition
+			    + (window->m_pWorkspace ? window->m_pWorkspace->m_vRenderOffset.value() : Vector2D());
 
 			auto wsize = window->m_vRealSize.value();
 
@@ -600,7 +600,7 @@ void Hy3TabGroup::renderTabBar() {
 			window_box.scale(scale);
 
 			if (window_box.width > 0 && window_box.height > 0)
-				g_pHyprOpenGL->renderRect(&window_box, CColor(0, 0, 0, 0), *window_rounding);
+				g_pHyprOpenGL->renderRect(&window_box, CHyprColor(0, 0, 0, 0), *window_rounding);
 		}
 
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
